@@ -247,7 +247,7 @@ export default function ChordInput() {
                 key={`${rec.tonic}-${rec.scaleType}`}
                 className={hasSongs ? "flex flex-col md:flex-row md:gap-6" : ""}
               >
-                <div className={hasSongs ? "md:w-3/5" : ""}>
+                <div className={hasSongs ? "md:w-3/5 [&>*]:md:h-full" : ""}>
                   <ScaleCard
                     rec={rec}
                     theory={theory}
