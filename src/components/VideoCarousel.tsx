@@ -25,8 +25,6 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
 
-  console.log("[VideoCarousel] currentIndex:", currentIndex, "playingIndex:", playingIndex, "match:", playingIndex === currentIndex);
-
   if (songs.length === 0) return null;
 
   const song = songs[currentIndex];
@@ -55,7 +53,6 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
             backgroundColor: "#000",
           }}
         >
-          {(() => { console.log("[VideoCarousel] Rendering:", playingIndex === currentIndex ? "IFRAME" : "THUMBNAIL", "for song:", song.song); return null; })()}
           {playingIndex === currentIndex ? (
             <iframe
               src={`${getYouTubeEmbedUrl(song.youtubeId, song.timestamp)}&autoplay=1`}
@@ -73,8 +70,9 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
             />
           ) : (
             <div
-              onClick={() => {
-                console.log("[VideoCarousel] Click! Setting playingIndex to", currentIndex);
+              onClick={() => setPlayingIndex(currentIndex)}
+              onTouchEnd={(e) => {
+                e.preventDefault();
                 setPlayingIndex(currentIndex);
               }}
               style={{
@@ -84,6 +82,7 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
                 width: "100%",
                 height: "100%",
                 cursor: "pointer",
+                touchAction: "manipulation",
               }}
             >
               <img
