@@ -70,6 +70,8 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
             />
           ) : (
             <div
+              role="button"
+              tabIndex={0}
               onClick={() => setPlayingIndex(currentIndex)}
               onTouchEnd={(e) => {
                 e.preventDefault();
@@ -83,19 +85,24 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
                 height: "100%",
                 cursor: "pointer",
                 touchAction: "manipulation",
+                WebkitTapHighlightColor: "transparent",
+                userSelect: "none",
+                WebkitUserSelect: "none",
               }}
             >
               <img
                 src={getYouTubeThumbnail(song.youtubeId, "hq")}
                 alt={`${song.song} by ${song.artist}`}
+                draggable={false}
                 style={{
                   width: "100%",
                   height: "100%",
                   objectFit: "cover",
                   display: "block",
+                  pointerEvents: "none",
                 }}
               />
-              {/* Play button */}
+              {/* Play button overlay — pointer-events: none so all taps hit the parent */}
               <div
                 style={{
                   position: "absolute",
@@ -107,6 +114,7 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: "rgba(0,0,0,0.3)",
+                  pointerEvents: "none",
                 }}
               >
                 <div
@@ -137,7 +145,7 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
               type="button"
               onClick={prev}
               disabled={currentIndex === 0}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 text-white disabled:opacity-30 hover:bg-gray-600 transition-colors cursor-pointer disabled:cursor-default"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 text-white disabled:opacity-30 [@media(hover:hover)]:hover:bg-gray-600 transition-colors cursor-pointer disabled:cursor-default"
               aria-label="Previous song"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -163,7 +171,7 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
               type="button"
               onClick={next}
               disabled={currentIndex === songs.length - 1}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 text-white disabled:opacity-30 hover:bg-gray-600 transition-colors cursor-pointer disabled:cursor-default"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 text-white disabled:opacity-30 [@media(hover:hover)]:hover:bg-gray-600 transition-colors cursor-pointer disabled:cursor-default"
               aria-label="Next song"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -183,7 +191,7 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
                   className={`h-2 w-2 rounded-full transition-colors cursor-pointer ${
                     i === currentIndex
                       ? "bg-indigo-500"
-                      : "bg-gray-600 hover:bg-gray-500"
+                      : "bg-gray-600 [@media(hover:hover)]:hover:bg-gray-500"
                   }`}
                   aria-label={`Go to song ${i + 1}`}
                 />
