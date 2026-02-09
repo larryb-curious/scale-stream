@@ -10,6 +10,7 @@ interface ParsedChord {
   tonic: string;
   notes: string[];
   quality: string; // "Major" | "Minor" | "Augmented" | "Diminished" | "Unknown"
+  type: string; // chord type name, e.g. "major", "diminished", "dominant seventh"
 }
 
 export interface ScaleRecommendation {
@@ -84,6 +85,7 @@ function parseChords(input: string): ParsedChord[] {
         tonic: chord.tonic ?? "",
         notes: chord.notes,
         quality: chord.quality,
+        type: chord.type ?? "",
       };
     });
 }
@@ -96,6 +98,106 @@ function mergeNotes(chords: ParsedChord[]): string[] {
     }
   }
   return Array.from(noteSet);
+}
+
+/**
+ * Detects tonic by analyzing harmonic relationships between chords.
+ * Returns the inferred key even if it's not present in the progression.
+ */
+function detectTonicFromHarmony(chords: ParsedChord[]): string | null {
+  const validChords = chords.filter((c) => c.valid && c.tonic);
+  if (validChords.length === 0) return null;
+
+  // Collect all chord roots and qualities
+  const progression = validChords.map(c => ({
+    root: c.tonic,
+    quality: c.quality || '',
+    type: c.type || ''
+  }));
+
+  // Check if this looks like a blues progression (multiple dom7s)
+  // In blues, the first dom7 IS the tonic (I7), not a V7 pointer
+  const dom7Chords = progression.filter(c =>
+    c.type === 'dominant seventh'
+  );
+  if (dom7Chords.length >= 2) {
+    return dom7Chords[0].root;
+  }
+
+  // Strategy 1: Look for diminished chords (viio → key is half-step up)
+  for (const chord of progression) {
+    if (chord.quality === 'Diminished' || chord.type === 'diminished') {
+      // F#dim suggests G major, Bdim suggests C major, etc.
+      const keyNote = Note.transpose(chord.root, '2m'); // half-step up
+      return keyNote;
+    }
+  }
+
+  // Strategy 2: Look for a single dominant 7th chord (V7 → key is fifth down)
+  for (const chord of progression) {
+    if (chord.type === 'dominant seventh') {
+      // D7 suggests G major, G7 suggests C major
+      const keyNote = Note.transpose(chord.root, '-5P'); // fifth down
+      return keyNote;
+    }
+  }
+
+  // Strategy 3: Analyze chord relationships (circle of fifths, common patterns)
+  // Check if progression fits common patterns in a potential key
+  const potentialKeys = new Set<string>();
+
+  // For each chord, check what keys it could be diatonic to
+  for (const chord of progression) {
+    const root = chord.root;
+    // Common positions this chord might occupy: I, ii, iii, IV, V, vi
+    potentialKeys.add(root); // Could be I
+    potentialKeys.add(Note.transpose(root, '2M')); // Could be vii
+    potentialKeys.add(Note.transpose(root, '-2M')); // Could be ii
+    potentialKeys.add(Note.transpose(root, '3M')); // Could be vi
+    potentialKeys.add(Note.transpose(root, '-3M')); // Could be iii
+    potentialKeys.add(Note.transpose(root, '4P')); // Could be V
+    potentialKeys.add(Note.transpose(root, '-4P')); // Could be IV
+  }
+
+  // Score each potential key by how many chords fit diatonically
+  const keyScores = new Map<string, number>();
+
+  for (const potentialKey of potentialKeys) {
+    const scale = Scale.get(`${potentialKey} major`);
+    const scaleNotes = scale.notes;
+
+    let score = 0;
+    for (const chord of progression) {
+      if (scaleNotes.includes(chord.root)) {
+        score += 1;
+      }
+    }
+
+    // Bonus if all chords fit
+    if (score === progression.length) {
+      score += 0.5;
+    }
+
+    keyScores.set(potentialKey, score);
+  }
+
+  // Return the key with the highest score
+  let bestKey: string | null = null;
+  let bestScore = 0;
+
+  for (const [key, score] of keyScores) {
+    if (score > bestScore) {
+      bestScore = score;
+      bestKey = key;
+    }
+  }
+
+  // Only return if we have strong confidence (all chords fit)
+  if (bestScore >= progression.length) {
+    return bestKey;
+  }
+
+  return null; // Fall back to existing logic
 }
 
 /**
@@ -146,27 +248,57 @@ function detectPrimaryTonic(chords: ParsedChord[]): string | null {
 // Blues detection (BUG 2)
 // ---------------------------------------------------------------------------
 
-/** Detect blues progressions: 2+ dominant 7th chords whose roots form I-IV or I-V. */
+/** Detect blues progressions while excluding ii-V-I jazz patterns. */
 function isBluesProgression(chords: ParsedChord[]): boolean {
-  const dom7Roots: number[] = [];
-  for (const chord of chords) {
-    if (!chord.valid) continue;
-    const rootChroma = Note.chroma(chord.tonic);
-    if (rootChroma === undefined) continue;
-    const chordChromas = noteSetToChromaSet(chord.notes);
-    // Minor 7th interval (10 semitones) = hallmark of dominant 7th chord
-    if (chordChromas.has((rootChroma + 10) % 12)) {
-      dom7Roots.push(rootChroma);
+  const validChords = chords.filter(c => c.valid);
+  if (validChords.length < 2) return false;
+
+  // Count dominant 7th and minor 7th chords by type name
+  const dom7Chords = validChords.filter(c =>
+    c.type === 'dominant seventh'
+  );
+
+  const min7Chords = validChords.filter(c =>
+    c.type === 'minor seventh'
+  );
+
+  // EXCLUDE ii-V-I patterns (minor7 → dom7 → resolution)
+  // This is jazz, not blues
+  for (let i = 0; i < validChords.length - 2; i++) {
+    const isMinor7 = min7Chords.some(m => m.tonic === validChords[i].tonic);
+    const isDom7 = dom7Chords.some(d => d.tonic === validChords[i + 1].tonic);
+
+    if (isMinor7 && isDom7) {
+      return false; // ii-V pattern detected, not blues
     }
   }
-  if (dom7Roots.length < 2) return false;
 
-  // Check if any pair of dom7 roots form a I-IV (5 semitones) or I-V (7 semitones) relationship
-  for (const root of dom7Roots) {
-    const hasIV = dom7Roots.some((r) => (r - root + 12) % 12 === 5);
-    const hasV = dom7Roots.some((r) => (r - root + 12) % 12 === 7);
-    if (hasIV || hasV) return true;
+  // Blues typically has MULTIPLE dominant 7ths
+  if (dom7Chords.length >= 2) {
+    return true;
   }
+
+  // OR check for classic I7→IV7 motion (both dom7, a perfect 4th apart)
+  for (let i = 0; i < validChords.length - 1; i++) {
+    const chord1 = validChords[i];
+    const chord2 = validChords[i + 1];
+
+    const bothDom7 =
+      dom7Chords.some(d => d.tonic === chord1.tonic) &&
+      dom7Chords.some(d => d.tonic === chord2.tonic);
+
+    if (bothDom7) {
+      const chroma1 = Note.chroma(chord1.tonic);
+      const chroma2 = Note.chroma(chord2.tonic);
+      if (chroma1 !== undefined && chroma2 !== undefined) {
+        const interval = (chroma2 - chroma1 + 12) % 12;
+        if (interval === 5) { // Perfect 4th up
+          return true;
+        }
+      }
+    }
+  }
+
   return false;
 }
 
@@ -479,7 +611,8 @@ export function analyzeProgression(input: string): AnalysisResult {
   const validChords = chords.filter((c) => c.valid);
   if (validChords.length === 0) return null;
 
-  const primaryTonic = detectPrimaryTonic(validChords);
+  const harmonicTonic = detectTonicFromHarmony(validChords);
+  const primaryTonic = harmonicTonic || detectPrimaryTonic(validChords);
   if (!primaryTonic) return null;
 
   const allNotes = mergeNotes(validChords);
