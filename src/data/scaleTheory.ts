@@ -90,7 +90,7 @@ const scaleTheory: Record<string, ScaleTheoryInfo> = {
     flavor:
       "Bright, open, and universally useful - the go-to for rock, country, and blues soloing over major keys (think The Allman Brothers' 'Ramblin' Man')",
     pentatonicTip:
-      "You learned the minor pentatonic, and one day you noticed that if you shifted 4 frets back, suddenly it sounded good over major chord progressions.",
+      "You learned the minor pentatonic, and one day you noticed that if you shifted 3 frets back, suddenly it sounded good over major chord progressions.",
   },
   "minor pentatonic": {
     degrees: "1 ♭3 4 5 ♭7",

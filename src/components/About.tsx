@@ -43,7 +43,7 @@ export default function About() {
             to make a website. Experiment and trust your ears always. Right now,
             this site is also pretty limited in that it will really only work
             with chord progressions common to rock, pop, country, basic R&B,
-            etc. You won't be served any melodic minor or bebop scale
+            etc. You won't be served any bebop scale
             recommendations, but still, I hope you can have fun here and maybe
             learn something. Thanks again for stopping by!
           </p>
