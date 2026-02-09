@@ -181,23 +181,33 @@ function detectTonicFromHarmony(chords: ParsedChord[]): string | null {
     keyScores.set(potentialKey, score);
   }
 
-  // Return the key with the highest score
-  let bestKey: string | null = null;
+  // Collect all keys tied for the highest score
+  const firstChordRoot = progression[0].root;
   let bestScore = 0;
 
+  for (const [, score] of keyScores) {
+    if (score > bestScore) bestScore = score;
+  }
+
+  const tiedKeys: string[] = [];
   for (const [key, score] of keyScores) {
-    if (score > bestScore) {
-      bestScore = score;
-      bestKey = key;
-    }
+    if (score === bestScore) tiedKeys.push(key);
   }
 
   // Only return if we have strong confidence (all chords fit)
-  if (bestScore >= progression.length) {
-    return bestKey;
+  if (bestScore < progression.length) {
+    return null; // Fall back to existing logic
   }
 
-  return null; // Fall back to existing logic
+  // If multiple keys tie, prefer first chord root; if it's not a winner, bail out
+  if (tiedKeys.length > 1) {
+    if (tiedKeys.includes(firstChordRoot)) {
+      return firstChordRoot;
+    }
+    return null; // Ambiguous — fall back to positional detection
+  }
+
+  return tiedKeys[0] ?? null;
 }
 
 /**
