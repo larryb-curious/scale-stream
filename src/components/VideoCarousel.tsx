@@ -69,65 +69,28 @@ export default function VideoCarousel({ mode }: VideoCarouselProps) {
               }}
             />
           ) : (
+            /* Single clickable div — img and play icon are purely visual */
             <div
-              role="button"
-              tabIndex={0}
               onClick={() => setPlayingIndex(currentIndex)}
               onTouchEnd={(e) => {
                 e.preventDefault();
                 setPlayingIndex(currentIndex);
               }}
+              className="absolute inset-0 cursor-pointer"
               style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                cursor: "pointer",
                 touchAction: "manipulation",
                 WebkitTapHighlightColor: "transparent",
                 userSelect: "none",
-                WebkitUserSelect: "none",
               }}
             >
               <img
                 src={getYouTubeThumbnail(song.youtubeId, "hq")}
                 alt={`${song.song} by ${song.artist}`}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
                 draggable={false}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  pointerEvents: "none",
-                }}
               />
-              {/* Play button overlay — pointer-events: none so all taps hit the parent */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "rgba(0,0,0,0.3)",
-                  pointerEvents: "none",
-                }}
-              >
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: "50%",
-                    backgroundColor: "#dc2626",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+                <div className="w-14 h-14 rounded-full bg-red-600 flex items-center justify-center">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                     <path d="M8 5v14l11-7z" />
                   </svg>
