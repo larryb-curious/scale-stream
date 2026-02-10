@@ -142,6 +142,27 @@ function detectTonicFromHarmony(chords: ParsedChord[]): string | null {
     }
   }
 
+  // Strategy 2.5: Cadence detection — a major chord a P5 above the last
+  // chord in the final 2-3 positions signals V→I resolution.
+  if (progression.length >= 4) {
+    const lastChord = progression[progression.length - 1];
+    const lastChroma = Note.chroma(lastChord.root);
+    if (lastChroma !== undefined) {
+      // Scan the last 2-3 chords (excluding the final one) for a dominant
+      const scanStart = Math.max(0, progression.length - 3);
+      for (let i = progression.length - 2; i >= scanStart; i--) {
+        const candidate = progression[i];
+        if (candidate.quality !== 'Major') continue;
+        const candChroma = Note.chroma(candidate.root);
+        if (candChroma === undefined) continue;
+        const interval = (candChroma - lastChroma + 12) % 12;
+        if (interval === 7) { // P5 above last chord = V→I
+          return lastChord.root;
+        }
+      }
+    }
+  }
+
   // Strategy 3: Analyze chord relationships (circle of fifths, common patterns)
   // Check if progression fits common patterns in a potential key
   const potentialKeys = new Set<string>();
